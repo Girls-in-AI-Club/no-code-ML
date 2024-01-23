@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percentage_error
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
@@ -32,6 +32,7 @@ def build_model(df, features, target):
     best_model = None
     best_mae = np.inf
     best_pred = None
+    best_model_name = None
 
     for name, model in models.items():
         model.fit(X_train, y_train)
@@ -39,36 +40,10 @@ def build_model(df, features, target):
         mae = mean_absolute_error(y_test, y_pred)
         if mae < best_mae:
             best_mae = mae
-            best_model = name
+            best_model = model
             best_pred = y_pred
-
-    dl_pred = build_deep_learning_model(X_train, y_train, X_test, y_test)
-    dl_mae = mean_absolute_error(y_test, dl_pred)
-    if dl_mae < best_mae:
-        best_mae = dl_mae
-        best_model = 'DeepLearningModel'
-        best_pred = dl_pred
-
-    return models[best_model], y_test, best_pred, best_model
-
-# Function to build a deep learning model
-def build_deep_learning_model(X_train, y_train, X_test, y_test):
-    scaler = StandardScaler().fit(X_train)
-    X_train_scaled = scaler.transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-
-    model = Sequential([
-        Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)),
-        Dense(32, activation='relu'),
-        Dense(1)
-    ])
-
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-    model.fit(X_train_scaled, y_train, validation_split=0.2, epochs=100, callbacks=[early_stopping])
-
-    y_pred = model.predict(X_test_scaled).flatten()
-    return y_pred
+            best_model_name = name
+    return best_model, best_model_name, y_test, best_pred
 
 # Function to show model expression
 def show_model(model, features):
@@ -79,10 +54,11 @@ def show_model(model, features):
         for i, coef in enumerate(coefficients):
             model_str += f"+ ({coef:.2f}) * {features[i]} "
         return model_str
-    elif isinstance(model, (XGBRegressor, RandomForestRegressor)):
-        return "Complex Model - Cannot be expressed as a simple mathematical equation."
-    elif model == 'DeepLearningModel':
-        return "Deep Learning Model - Cannot be expressed as a simple mathematical equation."
+    elif isinstance(model, XGBRegressor):
+        return "XGBoost Model - Cannot be expressed as a simple mathematical equation."
+    elif isinstance(model, RandomForestRegressor):
+        return "RandomForestRegressor Model - Cannot be expressed as a simple mathematical equation."
+    return "Unknown Model"
 
 # Streamlit UI
 st.title("No-Code ML Service")
@@ -95,26 +71,27 @@ if uploaded_file is not None:
     all_columns = df.columns.tolist()
     selected_features = st.multiselect('Select features columns', all_columns)
     target_column = st.selectbox('Select target column', all_columns)
-    if st.button('Build Regression Model'):
-        model, y_test, y_pred, best_model_name = build_model(df, selected_features, target_column)
-        plt.scatter(y_test, y_pred)
-        plt.xlabel('Actual Values')
-        plt.ylabel('Predicted Values')
-        plt.title('Actual vs Predicted Values')
-        st.pyplot(plt)
-        st.write('Mean Squared Error:', mean_squared_error(y_test, y_pred))
-        st.write('R^2 Score:', r2_score(y_test, y_pred))
-        if best_model_name == 'LinearRegression':
-            st.write("Model Equation:", show_model(model, selected_features))
-        else:
-            st.write("Model Description:", show_model(best_model_name, selected_features))
 
-        new_values = {feature: st.number_input(f"Enter {feature}") for feature in selected_features}
-        if st.button('Predict with New Data'):
-            new_data = np.array([list(new_values.values())]).reshape(1, -1)
-            if best_model_name == 'DeepLearningModel':
-                new_data_scaled = scaler.transform(new_data)  # Assuming 'scaler' is globally accessible
-                prediction = model.predict(new_data_scaled)
+    # New Data Input Area
+    if selected_features:
+        st.write("Enter new data values for prediction:")
+        new_data_values = {feature: st.number_input(f"Value for {feature}", key=feature) for feature in selected_features}
+
+        if st.button('Build and Predict', key='build_predict'):
+            model, model_name, y_test, y_pred = build_model(df, selected_features, target_column)
+            new_data = np.array([list(new_data_values.values())]).reshape(1, -1)
+            prediction = model.predict(new_data)
+            st.write("Prediction based on new data:", prediction[0])
+
+            # Model Evaluation and Visualization
+            plt.scatter(y_test, y_pred)
+            plt.xlabel('Actual Values')
+            plt.ylabel('Predicted Values')
+            plt.title('Actual vs Predicted Values')
+            st.pyplot(plt)
+            st.write('Mean Absolute Percentage Error (MAPE):', mean_absolute_percentage_error(y_test, y_pred))
+            st.write('Model Name:', model_name)
+            if isinstance(model, LinearRegression):
+                st.write("Model Equation:", show_model(model, selected_features))
             else:
-                prediction = model.predict(new_data)
-            st.write("Prediction:", prediction[0])
+                st.write("Model Description:", show_model(model, selected_features))

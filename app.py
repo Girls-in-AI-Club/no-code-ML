@@ -65,7 +65,7 @@ st.subheader("Made for Newton North Girls in AI Club")
 
 # Load and display logo image
 logo_image = Image.open("logo.png")
-st.image(logo_image, use_column_width=False, width=100, caption="")
+st.image(logo_image,  caption="")
 
 
 import pickle

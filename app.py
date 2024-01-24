@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # Function to load data
 def load_data(uploaded_file):
@@ -58,7 +59,14 @@ def show_model(model, features):
     return "Unknown Model"
 
 # Streamlit UI
-st.title("No-Code ML Service")
+st.set_page_config(page_title="Machine Learning Model Builder", page_icon="👩‍💻")
+st.title("Machine Learning Model Builder")
+st.subheader("Made for Newton North Girls in AI Club")
+
+# Load and display logo image
+logo_image = Image.open("logo.png")
+st.image(logo_image, use_column_width=False, width=100, caption="")
+
 
 import pickle
 

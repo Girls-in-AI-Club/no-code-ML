@@ -7,9 +7,6 @@ from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percent
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.callbacks import EarlyStopping
 import matplotlib.pyplot as plt
 
 # Function to load data

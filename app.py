@@ -9,6 +9,7 @@ from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from PIL import Image
+import time
 
 # Function to load data
 def load_data(uploaded_file):
@@ -67,6 +68,8 @@ st.subheader("Made for Newton North Girls in AI Club")
 logo_image = Image.open("logo.png")
 st.image(logo_image,  caption="")
 
+# Step 1: Data Acquisition
+st.header("Step 1: Data Acquisition")
 
 import pickle
 
@@ -81,10 +84,15 @@ if uploaded_file is not None:
     df = load_data(uploaded_file)
     if st.checkbox('Show raw data'):
         st.write(df)
+
+    # Step 2: Feature Engineering
+    st.header("Step 2: Feature Engineering")
     all_columns = df.columns.tolist()
     selected_features = st.multiselect('Select features columns', all_columns)
     target_column = st.selectbox('Select target column', all_columns)
-    # Check if model is already built
+
+    # Step 3: Train Model
+    st.header("Step 3: Train Model")
     if 'model' not in st.session_state or st.session_state['model'] is None:
         if st.button('Build Model', key='build_model'):
             model, model_name, y_test, y_pred = build_model(df, selected_features, target_column)
@@ -93,6 +101,10 @@ if uploaded_file is not None:
             st.session_state['y_test'] = y_test
             st.session_state['y_pred'] = y_pred
             save_model(model)
+            with st.spinner('Training model...'):
+                time.sleep(5)
+                st.success('Model trained successfully!')
+
     if 'model' in st.session_state and st.session_state['model'] is not None:
         st.write("Model built and saved as 'model.pkl'.")
         st.download_button('Download Model', data=open('model.pkl', 'rb'), file_name='model.pkl', mime='application/octet-stream')
@@ -111,11 +123,14 @@ if uploaded_file is not None:
             st.write("Model Equation:", show_model(model, selected_features))
         else:
             st.write("Model Description:", show_model(model, selected_features))
+
+    # Step 4: Predict Values
+    st.header("Step 4: Predict Values")
     # New Data Input Area for Multiple Rows
-    num_rows = st.number_input('Number of rows for new data', min_value=1, max_value=10, value=1)
+    num_rows = 1 #st.number_input('Number of rows for new data', min_value=1, max_value=10, value=1)
     new_data_values = []
     for i in range(num_rows):
-        row_data = {feature: st.number_input(f"Row {i+1} - Value for {feature}", key=f"{feature}_{i}") for feature in selected_features}
+        row_data = {feature: st.number_input(f"Value for {feature}", key=f"{feature}_{i}") for feature in selected_features}
         new_data_values.append(row_data)
 
     if st.button('Predict with New Data', key='predict'):
@@ -124,21 +139,4 @@ if uploaded_file is not None:
             predictions = st.session_state['model'].predict(new_data)
             st.write("Predictions:", predictions)
 
-    # Instructions to load and use the pickle model
-    st.markdown("""
-```python
-import pickle
-import numpy as np
-
-# Load the model
-with open('model.pkl', 'rb') as file:
-    model = pickle.load(file)
-
-# Replace this with your input data
-input_data = np.array([[value1, value2, ...]])  # shape (n_samples, n_features)
-
-# Make predictions
-predictions = model.predict(input_data)
-print(predictions)
-```
-    """)
+   

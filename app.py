@@ -67,9 +67,19 @@ def show_model(model, features):
         model_str = f"y = {intercept:.2f} "
         for i, coef in enumerate(coefficients):
             model_str += f"+ ({coef:.2f}) * {features[i]} "
-        return model_str
+        return "Linear Regression", model_str
+    elif isinstance(model, Ridge):
+        return "Ridge Regression", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
+    elif isinstance(model, Lasso):
+        return "Lasso Regression", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
+    elif isinstance(model, XGBRegressor):
+        return "XGBoost Regressor", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
+    elif isinstance(model, RandomForestRegressor):
+        return "Random Forest Regressor", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
+    elif isinstance(model, GradientBoostingRegressor):
+        return "Gradient Boosting Regressor", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
     
-    return "Unknown Model"
+    return "Unknown Model", "Unknown Model"
 
 # Function to save the model as a pickle file
 def save_model(model):

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percentage_error, mean_squared_error
+from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percentage_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -23,37 +23,32 @@ def load_data(uploaded_file):
     return df, label_encoders
 
 # Function to build various ML models
-def build_model(df, features, target, eval_metric):
+def build_model(df, features, target):
     df = df.dropna(subset=features + [target])
     X = df[features]
     y = df[target]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     models = {
         'LinearRegression': LinearRegression(),
-        'Ridge': Ridge(),
-        'Lasso': Lasso(),
-        'XGBRegressor': XGBRegressor(),
-        'RandomForestRegressor': RandomForestRegressor(),
-        'GradientBoostingRegressor': GradientBoostingRegressor()
+        'Ridge': Ridge(random_state=42),
+        'Lasso': Lasso(random_state=42),
+        'XGBRegressor': XGBRegressor(random_state=42),
+        'RandomForestRegressor': RandomForestRegressor(random_state=42),
+        'GradientBoostingRegressor': GradientBoostingRegressor(random_state=42)
     }
 
     best_model = None
-    best_metric = np.inf
+    best_mae = np.inf
     best_pred = None
     best_model_name = None
 
     for name, model in models.items():
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-        if eval_metric == 'mae':
-            metric = mean_absolute_error(y_test, y_pred)
-        elif eval_metric == 'mse':
-            metric = mean_squared_error(y_test, y_pred)
-        elif eval_metric == 'r2':
-            metric = r2_score(y_test, y_pred)
-        if metric < best_metric:
-            best_metric = metric
+        mae = mean_absolute_error(y_test, y_pred)
+        if mae < best_mae:
+            best_mae = mae
             best_model = model
             best_pred = y_pred
             best_model_name = name
@@ -68,18 +63,8 @@ def show_model(model, features):
         for i, coef in enumerate(coefficients):
             model_str += f"+ ({coef:.2f}) * {features[i]} "
         return "Linear Regression", model_str
-    elif isinstance(model, Ridge):
-        return "Ridge Regression", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
-    elif isinstance(model, Lasso):
-        return "Lasso Regression", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
-    elif isinstance(model, XGBRegressor):
-        return "XGBoost Regressor", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
-    elif isinstance(model, RandomForestRegressor):
-        return "Random Forest Regressor", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
-    elif isinstance(model, GradientBoostingRegressor):
-        return "Gradient Boosting Regressor", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
-    
-    return "Unknown Model", "Unknown Model"
+    else:
+        return f"{type(model).__name__}", f"{type(model).__name__} Model - Cannot be expressed as a simple mathematical equation."
 
 # Function to save the model as a pickle file
 def save_model(model):
@@ -115,11 +100,10 @@ if uploaded_file is not None:
 
     # Step 3: Train Model
     st.header("Step 3: Train Model")
-    eval_metric = st.selectbox('Select evaluation metric', ['mae', 'mse', 'r2'])
     
     if 'model' not in st.session_state or st.session_state['model'] is None:
         if st.button('Build Model', key='build_model'):
-            model, model_name, y_test, y_pred = build_model(df, selected_features, target_column, eval_metric)
+            model, model_name, y_test, y_pred = build_model(df, selected_features, target_column)
             st.session_state['model'] = model
             st.session_state['model_name'] = model_name
             st.session_state['y_test'] = y_test
@@ -139,12 +123,15 @@ if uploaded_file is not None:
         model_name = st.session_state['model_name']
         y_test = st.session_state['y_test']
         y_pred = st.session_state['y_pred']
+        plt.figure(figsize=(10, 6))
         plt.scatter(y_test, y_pred)
         plt.xlabel('Actual Values')
         plt.ylabel('Predicted Values')
         plt.title('Actual vs Predicted Values')
         st.pyplot(plt)
+        st.write('Mean Absolute Error (MAE):', mean_absolute_error(y_test, y_pred))
         st.write('Mean Absolute Percentage Error (MAPE):', mean_absolute_percentage_error(y_test, y_pred))
+        st.write('R-squared (R2) Score:', r2_score(y_test, y_pred))
         st.write("Model Description:", show_model(model, selected_features))
 
     # Step 4: Predict Values
